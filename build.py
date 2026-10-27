@@ -53,6 +53,19 @@ for d in OPEN:  # 대표 사진: 앞쪽 5장 중 그래픽 점수가 가장 낮�
 OPEN_SET = {d['no'] for d in OPEN}
 
 
+
+def P(text):
+    """가독성: 긴 문단을 1~2문장 단위 문단으로 나눈다(긴 문장은 혼자, 짧은 문장은 둘씩)."""
+    ss = [x.strip() for x in re.split(r'(?<=[.?!])\s+', text.strip()) if x.strip()]
+    out, buf = [], []
+    for x in ss:
+        buf.append(x)
+        if len(buf) == 2 or len(x) > 55:
+            out.append(' '.join(buf)); buf = []
+    if buf: out.append(' '.join(buf))
+    return ''.join(f'<p>{e(x)}</p>' for x in out)
+
+
 def head(title, desc, canon, pre, extra='', img=''):
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)}</title><meta name="description" content="{e(desc)}"><link rel="canonical" href="{DOMAIN}{canon}">
@@ -89,7 +102,7 @@ def render_post(d):
     rel = (rel + [x for x in OPEN if x['no'] != d['no'] and x not in rel])[:3]
     secs = []
     for i, s in enumerate(d['sections'], 1):
-        b = f'<h2 id="s{i}">{i}. {e(s["h"])}</h2>' + ''.join(f'<p>{e(p)}</p>' for p in s['paras'])
+        b = f'<h2 id="s{i}">{i}. {e(s["h"])}</h2>' + ''.join(P(p) for p in s['paras'])
         if s.get('ticks'): b += '<ul class="ticks">' + ''.join(f'<li>{e(t)}</li>' for t in s['ticks']) + '</ul>'
         if i == 2 and len(im) >= 3: b += f'<div class="pair" data-reveal><img src="{src(1)}" alt="{e(d["prod"])} 제작 사례" loading="lazy"><img src="{src(2)}" alt="{e(d["prod"])} 설치 모습" loading="lazy"></div>'
         secs.append(b)
@@ -99,10 +112,10 @@ def render_post(d):
         spec = '<div class="spec" data-reveal><table><thead><tr>' + ''.join(f'<th>{e(c)}</th>' for c in hd) + '</tr></thead><tbody>' + \
                ''.join('<tr><th>' + e(r[0]) + '</th>' + ''.join(f'<td>{e(c)}</td>' for c in r[1:]) + '</tr>' for r in rows) + '</tbody></table></div>'
     gallery = ''.join(f'<img src="{src(k)}" alt="{e(d["prod"])} 출고 사진 {k - 3}" loading="lazy">' for k in range(4, min(len(im), 13)))
-    case = f'''<h2 id="case">{e(d['case']['h'])}</h2>''' + ''.join(f'<p>{e(p)}</p>' for p in d['case']['paras']) + \
+    case = f'''<h2 id="case">{e(d['case']['h'])}</h2>''' + ''.join(P(p) for p in d['case']['paras']) + \
         (f'<figure class="fig" data-reveal><img src="{src(3)}" alt="{e(d["case"]["h"])}" loading="lazy"></figure>' if len(im) > 3 else '') + \
         (f'<div class="gallery reveal-group">{gallery}</div>' if gallery else '') + spec
-    faq = ''.join(f'<details class="qa"><summary>{e(f["q"])}</summary><p>{e(f["a"])}</p></details>' for f in d['faq'])
+    faq = ''.join(f'<details class="qa"><summary>{e(f["q"])}</summary>{P(f["a"])}</details>' for f in d['faq'])
     toc = ''.join(f'<li><a href="#s{i}">{e(s["h"])}</a></li>' for i, s in enumerate(d['sections'], 1)) + '<li><a href="#case">사례</a></li><li><a href="#faq">자주 묻는 질문</a></li>'
     url = f'/blog/{quote(d["slug"])}.html'
     lds = ld({'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': d['title'], 'description': d['description'], 'datePublished': d['date'],
@@ -119,7 +132,7 @@ def render_post(d):
 <p class="meta">한성쇼케이스 · {d['date'].replace('-', '.')}</p>
 <figure class="cover"><img src="{src(0)}" alt="{e(d['kw'])} — 한성쇼케이스 제작 사례"></figure>
 <div class="answer" data-reveal><b>먼저 답부터</b><p>{e(d['answer'])}</p></div>
-{''.join(f'<p>{e(p)}</p>' for p in d['intro'])}
+{''.join(P(p) for p in d['intro'])}
 {''.join(secs)}
 <div class="check" data-reveal><h3>체크리스트</h3><ol>{''.join(f'<li>{e(c)}</li>' for c in d['checklist'])}</ol></div>
 {case}
