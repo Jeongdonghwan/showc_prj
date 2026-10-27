@@ -1,0 +1,12 @@
+# 작업용 임시
+data/_*.txt
+deploy/
+__pycache__/
+# 빌드 결과 (deploy 브랜치로 올라감)
+site/blog/
+site/index.html
+site/sitemap.xml
+site/rss.xml
+site/robots.txt
+# 내려받은 사례 사진 — scripts/images.py 로 다시 받음 (deploy 브랜치에는 포함)
+site/img/c/
