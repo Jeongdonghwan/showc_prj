@@ -15,6 +15,16 @@ DOMAIN = os.environ.get('SITE_URL', 'https://hansungshowcase.example')  # TODO: 
 OPEN_WEEK = int(os.environ.get('OPEN_WEEK', '1'))
 START = date(2026, 11, 2)  # 1주차 월요일 — TODO: 실제 오픈일
 PHONE = '031-986-2458'
+# 플로팅 바로가기 (네이버 블로그 hansung_01 프로필·글에 걸린 링크)
+KAKAO = 'http://pf.kakao.com/_wxlvAn'
+STORE = 'https://smartstore.naver.com/hansungshowcase'
+YOUTUBE = 'https://www.youtube.com/channel/UCindc6qHWqPr2A1fyaJOHXg'
+_ic = lambda d: f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{d}"/></svg>'
+FAB = (f'<nav class="fab" aria-label="바로가기">'
+       f'<a class="fab-tel" href="tel:0319862458">{_ic("M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z")}<span>전화</span></a>'
+       f'<a class="fab-kakao" href="{KAKAO}" target="_blank" rel="noopener">{_ic("M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 5.9L6.5 20l3.6-2.3c.6.1 1.2.1 1.9.1 5 0 9-3.1 9-7s-4-6.8-9-6.8z")}<span>카톡 상담</span></a>'
+       f'<a class="fab-store" href="{STORE}" target="_blank" rel="noopener">{_ic("M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2")}<span>스마트스토어</span></a>'
+       f'<a class="fab-yt" href="{YOUTUBE}" target="_blank" rel="noopener">{_ic("M2.5 7.5a3 3 0 0 1 2.1-2.1C6.5 5 12 5 12 5s5.5 0 7.4.4a3 3 0 0 1 2.1 2.1c.5 1.9.5 4.5.5 4.5s0 2.6-.5 4.5a3 3 0 0 1-2.1 2.1C17.5 19 12 19 12 19s-5.5 0-7.4-.4a3 3 0 0 1-2.1-2.1C2 14.6 2 12 2 12s0-2.6.5-4.5zM10 9.5v5l4.5-2.5z")}<span>유튜브</span></a></nav>')
 e = html.escape
 
 def _load(f):
@@ -83,7 +93,7 @@ def head(title, desc, canon, pre, extra='', img=''):
 def foot(pre):
     return f'''<footer class="foot"><div class="wrap foot-in"><div><b>한성쇼케이스</b><p>업소용 냉장·냉동 쇼케이스 맞춤 제작</p></div>
 <ul><li><span>대표전화</span>{PHONE}</li><li><span>A/S</span>전국 240여 개 전담 센터</li><li><span>사업자</span>추후 입력</li></ul></div></footer>
-<a class="sticky" href="tel:0319862458">전화 상담 {PHONE}</a><script src="{pre}motion.js"></script></body></html>'''
+{FAB}<script src="{pre}motion.js"></script></body></html>'''
 
 
 def ld(obj):
@@ -173,7 +183,7 @@ def render_index():
 <section class="band" data-reveal><div class="wrap band-in"><p>매장 실측과 도면은 <em>무료 상담</em>으로 먼저 받아 보세요.</p><a class="btn" href="tel:0319862458">{PHONE}</a></div></section></main>'''
     ilist = ld({'@context': 'https://schema.org', '@type': 'ItemList', 'name': '쇼케이스 가이드', 'itemListElement': [
         {'@type': 'ListItem', 'position': i + 1, 'url': f"{DOMAIN}/blog/{quote(d['slug'])}.html", 'name': d['title']} for i, d in enumerate(sorted(OPEN, key=lambda d: (-d['week'], d['no']))[:30])]})
-    org = ld({'@context': 'https://schema.org', '@type': 'Organization', 'name': '한성쇼케이스', 'url': f'{DOMAIN}/', 'telephone': PHONE, 'sameAs': ['https://blog.naver.com/hansung_01']})
+    org = ld({'@context': 'https://schema.org', '@type': 'Organization', 'name': '한성쇼케이스', 'url': f'{DOMAIN}/', 'telephone': PHONE, 'sameAs': ['https://blog.naver.com/hansung_01', STORE, YOUTUBE]})
     return head('한성쇼케이스 | 업소용 쇼케이스 맞춤 제작·가이드', '꽃냉장고·정육·제과·음료 쇼케이스 맞춤 제작. 가격, 중고, 온도, 전기세, A/S 가이드.', '/', '', ilist + org, f"img/{L[26]['file']}") + body + foot('')
 
 
