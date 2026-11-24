@@ -15,6 +15,7 @@ DOMAIN = os.environ.get('SITE_URL', 'https://hansungshowcase.example')  # TODO: 
 OPEN_WEEK = int(os.environ.get('OPEN_WEEK', '1'))
 START = date(2026, 11, 2)  # 1주차 월요일 — TODO: 실제 오픈일
 PHONE = '031-986-2458'
+UPDATED = '2026-11-24'  # title·description 형식을 바꾼 날 → sitemap lastmod·dateModified (글 날짜가 더 늦으면 글 날짜)
 # 플로팅 바로가기 (네이버 블로그 hansung_01 프로필·글에 걸린 링크)
 KAKAO = 'http://pf.kakao.com/_wxlvAn'
 STORE = 'https://smartstore.naver.com/hansungshowcase'
@@ -56,6 +57,17 @@ _GC = {}
 def _gs(fn):
     if fn not in _GC: _GC[fn] = _g(os.path.join(SITE, 'img', 'c', fn))
     return _GC[fn]
+_sp = lambda t: re.split(r'(?<=[.?!])\s+', t.strip())
+for d in POSTS:
+    # title: 글 제목 + 자리가 남으면 상호, 전체 40자 이하. 검색 설명: 키워드가 든 첫 문장(80자 이하) + 상담 전화, 45~80자
+    d['mtitle'] = d['title'] + ' | 한성쇼케이스' if len(d['title']) <= 31 else d['title']
+    s = next((x for x in _sp(d['description']) + _sp(d['answer'])
+              if 22 <= len(x) <= 80 and d['kw'].split()[0] in x), None)
+    s = s or next((f"{d['kw']} — {x}" for x in _sp(d['description'])[1:] if len(d['kw']) + 3 + len(x) <= 80), d['title'] + '.')  # 첫 문장이 80자를 넘는 글
+    d['mdesc'] = s + (f' 한성쇼케이스 상담 {PHONE}' if len(s) <= 57 else '')
+    d['mod'] = min(max(d['date'], UPDATED), date.today().isoformat())
+assert len({d['mtitle'] for d in POSTS}) == len({d['mdesc'] for d in POSTS}) == len(POSTS), 'title·description 중복'
+assert all(len(d['mtitle']) <= 40 and 45 <= len(d['mdesc']) <= 80 for d in POSTS), 'title 40자·description 45~80자'
 OPEN = [d for d in POSTS if d['week'] <= OPEN_WEEK and d['imgs']]
 for d in OPEN:  # 대표 사진: 앞쪽 5장 중 그래픽 점수가 가장 낮은 것
     k = min(range(min(5, len(d['imgs']))), key=lambda i: _gs(d['imgs'][i][0]))
@@ -128,7 +140,7 @@ def render_post(d):
     faq = ''.join(f'<details class="qa"><summary>{e(f["q"])}</summary>{P(f["a"])}</details>' for f in d['faq'])
     toc = ''.join(f'<li><a href="#s{i}">{e(s["h"])}</a></li>' for i, s in enumerate(d['sections'], 1)) + '<li><a href="#case">사례</a></li><li><a href="#faq">자주 묻는 질문</a></li>'
     url = f'/blog/{quote(d["slug"])}.html'
-    lds = ld({'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': d['title'], 'description': d['description'], 'datePublished': d['date'],
+    lds = ld({'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': d['title'], 'description': d['description'], 'datePublished': d['date'], 'dateModified': d['mod'],
               'image': f'{DOMAIN}/img/c/{im[0][0]}', 'author': {'@type': 'Organization', 'name': '한성쇼케이스'}, 'mainEntityOfPage': f'{DOMAIN}{url}'}) + \
         ld({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [{'@type': 'Question', 'name': f['q'], 'acceptedAnswer': {'@type': 'Answer', 'text': f['a']}} for f in d['faq']]}) + \
         ld({'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [{'@type': 'ListItem', 'position': 1, 'name': '블로그', 'item': f'{DOMAIN}/'},
@@ -152,7 +164,7 @@ def render_post(d):
 {('<section class="related"><h3>함께 보면 좋은 글</h3><ul>' + ''.join(f'<li><a href="{x["slug"]}.html">{e(x["title"])}</a></li>' for x in rel) + '</ul></section>') if rel else ''}
 <p class="tags">{' · '.join(e(t) for t in d['tags'])}</p>
 </article><aside class="toc"><div class="toc-in"><b>목차</b><ol>{toc}</ol><a class="btn small" href="tel:0319862458">{PHONE}</a></div></aside></div></main>'''
-    return head(f'{d["title"]} | 한성쇼케이스', d['description'], url, pre, lds, f'img/c/{im[0][0]}') + body + foot(pre)
+    return head(d['mtitle'], d['mdesc'], url, pre, lds, f'img/c/{im[0][0]}') + body + foot(pre)
 
 
 def render_index():
@@ -193,8 +205,8 @@ if __name__ == '__main__':
     for d in OPEN:
         open(os.path.join(blog, f'{d["slug"]}.html'), 'w', encoding='utf-8').write(render_post(d))
     open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8').write(render_index())
-    urls = [f'{DOMAIN}/'] + [f'{DOMAIN}/blog/{quote(d["slug"])}.html' for d in OPEN]
-    open(os.path.join(SITE, 'sitemap.xml'), 'w', encoding='utf-8').write('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{u}</loc></url>' for u in urls) + '</urlset>')
+    urls = [(f'{DOMAIN}/', max(d['mod'] for d in OPEN))] + [(f'{DOMAIN}/blog/{quote(d["slug"])}.html', d['mod']) for d in OPEN]
+    open(os.path.join(SITE, 'sitemap.xml'), 'w', encoding='utf-8').write('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f'<url><loc>{u}</loc><lastmod>{m}</lastmod></url>' for u, m in urls) + '</urlset>')
     items = ''.join(f'''<item><title>{e(d['title'])}</title><link>{DOMAIN}/blog/{quote(d['slug'])}.html</link><guid isPermaLink="true">{DOMAIN}/blog/{quote(d['slug'])}.html</guid><description>{e(d['description'])}</description><category>{e(d['cat'])}</category><pubDate>{format_datetime(datetime.fromisoformat(d['date']).replace(hour=9, tzinfo=timezone.utc))}</pubDate></item>''' for d in sorted(OPEN, key=lambda d: d['date'], reverse=True)[:100])
     open(os.path.join(SITE, 'rss.xml'), 'w', encoding='utf-8').write(f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>한성쇼케이스 블로그</title><link>{DOMAIN}/</link><description>업소용 쇼케이스 가격·중고·온도·전기세·A/S 가이드</description><language>ko</language>{items}</channel></rss>')
     for old in ('post.html',):  # 예전 시안 페이지 제거
